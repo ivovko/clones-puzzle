@@ -1,0 +1,12 @@
+.vs
+.vscode
+
+Binaries/*
+!Binaries/Win64/
+Binaries/Win64/*
+!Binaries/Win64/UnrealEditor-PuzzleGame.dll
+
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
