@@ -1,15 +1,14 @@
-#include "ViewInteractableComponent.h"
+#include "ViewInteractionComponent.h"
 #include "ViewInteractableInterface.h" 
-#include "PuzzleGameCharacter.h"
 #include "Kismet/GameplayStatics.h"
 
    
-UViewInteractableComponent::UViewInteractableComponent()
+UViewInteractionComponent::UViewInteractionComponent()
 {
     //placeholder
 }
 
-void UViewInteractableComponent::BeginPlay()
+void UViewInteractionComponent::BeginPlay()
 {
     Super::BeginPlay();
 
@@ -36,7 +35,7 @@ void UViewInteractableComponent::BeginPlay()
     }
 }
 
-void UViewInteractableComponent::StartPointed()
+void UViewInteractionComponent::StartPointed()
 {
     for (int32 i = 0; i < NumMaterials; i++)
     {
@@ -54,7 +53,7 @@ void UViewInteractableComponent::StartPointed()
     }
 }
 
-void UViewInteractableComponent::EndPointed()
+void UViewInteractionComponent::EndPointed()
 {
     for (int32 i = 0; i < NumMaterials; i++)
     {

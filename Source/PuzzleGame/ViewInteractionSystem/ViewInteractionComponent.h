@@ -2,7 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "ViewInteractableComponent.generated.h"
+#include "ViewInteractionComponent.generated.h"
 
 /*
     This component is responsible for handling the visual feedback
@@ -12,12 +12,12 @@
     ViewInteractableInterface to function properly.
 */
 UCLASS(Blueprintable, meta=(BlueprintSpawnableComponent))
-class UViewInteractableComponent : public UActorComponent
+class UViewInteractionComponent : public UActorComponent
 {
     GENERATED_BODY()
 
 public:
-    UViewInteractableComponent();
+    UViewInteractionComponent();
 
     virtual void BeginPlay() override;
 

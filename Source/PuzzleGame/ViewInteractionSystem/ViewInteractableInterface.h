@@ -6,7 +6,7 @@
 /*
     This interface defines the contract for objects that can be interacted with visually.
     
-    This interface is required by the ViewInteractableComponent to function properly.
+    This interface is required by the ViewInteractionComponent to function properly.
 */
 UINTERFACE(BlueprintType)
 class UViewInteractableInterface: public UInterface
