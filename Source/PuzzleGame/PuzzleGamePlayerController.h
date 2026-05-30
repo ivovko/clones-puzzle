@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "CloneSystem/CloneAbilityComponent.h"
 #include "PuzzleGamePlayerController.generated.h"
 
 class UInputMappingContext;
@@ -17,6 +18,9 @@ UCLASS(abstract)
 class PUZZLEGAME_API APuzzleGamePlayerController : public APlayerController
 {
 	GENERATED_BODY()
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+	UCloneAbilityComponent* CloneAbility;
 	
 public:
 

@@ -6,11 +6,13 @@
 #include "Engine/LocalPlayer.h"
 #include "InputMappingContext.h"
 #include "PuzzleGameCameraManager.h"
+#include "CloneSystem/InputBindableComponent.h"
 
 APuzzleGamePlayerController::APuzzleGamePlayerController()
 {
 	// set the player camera manager class
 	PlayerCameraManagerClass = APuzzleGameCameraManager::StaticClass();
+	CloneAbility = CreateDefaultSubobject<UCloneAbilityComponent>(TEXT("CloneAbilityComponent"));
 }
 
 void APuzzleGamePlayerController::SetupInputComponent()
@@ -25,4 +27,6 @@ void APuzzleGamePlayerController::SetupInputComponent()
 			Subsystem->AddMappingContext(CurrentContext, 0);
 		}
 	}
+
+	IInputBindableComponent::Execute_SetupInputComponent(CloneAbility, InputComponent);
 }

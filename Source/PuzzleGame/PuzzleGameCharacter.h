@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
+#include "CloneSystem/CloneableCharacter.h"
 #include "PuzzleGameCharacter.generated.h"
 
 class UInputComponent;
@@ -19,7 +20,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
  *  A basic first person character
  */
 UCLASS(abstract)
-class APuzzleGameCharacter : public ACharacter
+class APuzzleGameCharacter : public ACloneableCharacter
 {
 	GENERATED_BODY()
 
