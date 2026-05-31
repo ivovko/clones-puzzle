@@ -6,7 +6,7 @@
 #include "Engine/LocalPlayer.h"
 #include "InputMappingContext.h"
 #include "PuzzleGameCameraManager.h"
-#include "CloneSystem/InputBindableComponent.h"
+#include "Mechanics/CloneAbility/InputBindableInterface.h"
 
 APuzzleGamePlayerController::APuzzleGamePlayerController()
 {
@@ -28,5 +28,15 @@ void APuzzleGamePlayerController::SetupInputComponent()
 		}
 	}
 
-	IInputBindableComponent::Execute_SetupInputComponent(CloneAbility, InputComponent);
+	CloneAbility->SetupInputComponent(InputComponent);
+}
+
+void APuzzleGamePlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+
+	if (ACloneableCharacter* CloneablePawn = Cast<ACloneableCharacter>(InPawn))
+	{
+		CloneAbility->OnPossessClone(CloneablePawn);
+	}
 }

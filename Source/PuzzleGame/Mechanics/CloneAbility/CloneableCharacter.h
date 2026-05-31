@@ -2,13 +2,13 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "../ViewInteractionSystem/ViewInteractableInterface.h"
-#include "../ViewInteractionSystem/ViewInteractionComponent.h"
+#include "../ViewInteraction/ViewInteractableInterface.h"
+#include "../ViewInteraction/ViewInteractionComponent.h"
 #include "CloneableCharacter.generated.h"
 
 /*
     This class provides the functionality for characters that
-    can be cloned under usage of the clone ability system.
+    can be cloned under usage of the clone ability.
 */
 UCLASS(BlueprintType)
 class ACloneableCharacter : public ACharacter, public IViewInteractableInterface
@@ -16,9 +16,6 @@ class ACloneableCharacter : public ACharacter, public IViewInteractableInterface
     GENERATED_BODY()
 
     FRotator CameraRotation;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-    TObjectPtr<UViewInteractionComponent> ViewInteraction;
 
 public:
     ACloneableCharacter();
@@ -32,4 +29,9 @@ public:
     UFUNCTION(BlueprintCallable)
     FRotator GetCameraRotation() const { return CameraRotation; }
 
+    virtual UMeshComponent *GetViewInteractableMesh() const override { return GetMesh(); }
+
+protected:
+    UPROPERTY(EditAnywhere, BlueprintReadOnly)
+    TObjectPtr<UViewInteractionComponent> ViewInteraction;
 };

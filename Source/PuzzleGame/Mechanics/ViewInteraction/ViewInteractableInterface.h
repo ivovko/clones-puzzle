@@ -17,7 +17,8 @@ class UViewInteractableInterface: public UInterface
 class IViewInteractableInterface
 {
     GENERATED_BODY()
+
 public:
-    UFUNCTION(BlueprintNativeEvent, BlueprintCallable)
-    UMeshComponent* GetViewInteractableMesh();
+    virtual UMeshComponent* GetViewInteractableMesh() const = 0;
+
 };

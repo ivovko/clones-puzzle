@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
-#include "CloneSystem/CloneAbilityComponent.h"
+#include "Mechanics/CloneAbility/CloneAbilityComponent.h"
 #include "PuzzleGamePlayerController.generated.h"
 
 class UInputMappingContext;
@@ -21,6 +21,8 @@ class PUZZLEGAME_API APuzzleGamePlayerController : public APlayerController
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	UCloneAbilityComponent* CloneAbility;
+
+	virtual void OnPossess(APawn* InPawn) override;
 	
 public:
 

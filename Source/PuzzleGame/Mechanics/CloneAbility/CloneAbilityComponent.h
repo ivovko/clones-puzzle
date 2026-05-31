@@ -1,7 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "InputBindableComponent.h"
+#include "InputBindableInterface.h"
 #include "CloneableCharacter.h"
 #include "CloneAbilityComponent.generated.h"
 
@@ -16,11 +16,9 @@ class UInputAction;
 */
 
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent))
-class UCloneAbilityComponent : public UActorComponent, public IInputBindableComponent
+class UCloneAbilityComponent : public UActorComponent, public IInputBindableInterface
 {
 	GENERATED_BODY()
-	
-	virtual void SetupInputComponent_Implementation(UInputComponent *InputComponent) override;
 
 	virtual void BeginPlay() override;
 
@@ -31,18 +29,6 @@ class UCloneAbilityComponent : public UActorComponent, public IInputBindableComp
 	void SlowTime();
 
 	void PossessClone();
-
-	UFUNCTION(BlueprintCallable)
-	void OnPossessClone(ACloneableCharacter *Clone);
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UInputAction> SpawnCloneAction;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UInputAction> PossessionAction;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	float PossessionRange = 100000.0f;
 
 	UPROPERTY()
 	TObjectPtr<APlayerController> PC;
@@ -61,5 +47,19 @@ class UCloneAbilityComponent : public UActorComponent, public IInputBindableComp
 
 public:
 	UCloneAbilityComponent();
+
+	virtual void SetupInputComponent(UInputComponent *InputComponent) override;
+
+	void OnPossessClone(ACloneableCharacter *Clone);
+
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<UInputAction> SpawnCloneAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<UInputAction> PossessionAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	float PossessionRange = 100000.0f;
 
 };

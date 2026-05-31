@@ -16,12 +16,16 @@ class UViewInteractionComponent : public UActorComponent
 {
     GENERATED_BODY()
 
-public:
-    UViewInteractionComponent();
+    TObjectPtr<UMeshComponent> OwnerMesh;
+    
+    TArray<TObjectPtr<UMaterialInterface>> OriginalMaterials;
+
+    int32 NumMaterials = 0;
 
     virtual void BeginPlay() override;
 
-    int32 NumMaterials = 0;
+public:
+    UViewInteractionComponent();
 
     UFUNCTION(BlueprintCallable)
     void StartPointed();
@@ -31,15 +35,9 @@ public:
 
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly)
-    UPrimitiveComponent* CollisionSource;
+    TObjectPtr<UPrimitiveComponent> CollisionSource;
 
-    UPROPERTY()
-    UMeshComponent* OwnerMesh;
-    
-    UPROPERTY()
-    TArray<UMaterialInterface*> OriginalMaterials;
-    
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TArray<UMaterialInterface*> HighlightMaterials;
+    TArray<TObjectPtr<UMaterialInterface>> HighlightMaterials;
 
 };

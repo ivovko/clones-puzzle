@@ -17,9 +17,9 @@ void UViewInteractionComponent::BeginPlay()
         CollisionSource->AttachToComponent(GetOwner()->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
     }
 
-    if (GetOwner()->GetClass()->ImplementsInterface(UViewInteractableInterface::StaticClass()))
+    if (IViewInteractableInterface* Interactable = Cast<IViewInteractableInterface>(GetOwner()))
     {
-        OwnerMesh = IViewInteractableInterface::Execute_GetViewInteractableMesh(GetOwner());
+        OwnerMesh = Interactable->GetViewInteractableMesh();
 
         if (OwnerMesh)
         {

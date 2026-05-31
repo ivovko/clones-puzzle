@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
-#include "CloneSystem/CloneableCharacter.h"
+#include "Mechanics/CloneAbility/CloneableCharacter.h"
 #include "PuzzleGameCharacter.generated.h"
 
 class UInputComponent;

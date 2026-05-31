@@ -2,7 +2,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "EnhancedInputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "../ViewInteractionSystem/ViewInteractionComponent.h"
+#include "../ViewInteraction/ViewInteractionComponent.h"
 
 UCloneAbilityComponent::UCloneAbilityComponent()
 {
@@ -18,7 +18,7 @@ void UCloneAbilityComponent::BeginPlay()
     Clones.Add(CurrentClone);
 }
 
-void UCloneAbilityComponent::SetupInputComponent_Implementation(UInputComponent *InputComponent)
+void UCloneAbilityComponent::SetupInputComponent(UInputComponent *InputComponent)
 {
     if (UEnhancedInputComponent *EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent))
     {
