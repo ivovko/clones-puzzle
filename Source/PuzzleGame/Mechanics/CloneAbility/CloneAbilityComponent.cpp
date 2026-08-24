@@ -39,6 +39,8 @@ void UCloneAbilityComponent::SpawnClone()
 
     if (NewClone)
     {
+        NewClone->SetCameraRotation(PC->GetControlRotation());
+
         if (Clones.Num() == 3)
         {
             if (Clones[0] == CurrentClone)

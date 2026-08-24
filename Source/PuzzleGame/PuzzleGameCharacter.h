@@ -6,12 +6,14 @@
 #include "GameFramework/Character.h"
 #include "Logging/LogMacros.h"
 #include "Mechanics/CloneAbility/CloneableCharacter.h"
+#include "Mechanics/DataFlow/DataFlowInteractableInterface.h"
 #include "PuzzleGameCharacter.generated.h"
 
 class UInputComponent;
 class USkeletalMeshComponent;
 class UCameraComponent;
 class UInputAction;
+class ALaserDataFlow;
 struct FInputActionValue;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
@@ -20,7 +22,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
  *  A basic first person character
  */
 UCLASS(abstract)
-class APuzzleGameCharacter : public ACloneableCharacter
+class APuzzleGameCharacter : public ACloneableCharacter, public IDataFlowInteractableInterface
 {
 	GENERATED_BODY()
 
@@ -49,6 +51,12 @@ protected:
 	/** Mouse Look Input Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category ="Input")
 	class UInputAction* MouseLookAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Data Flow")
+	TObjectPtr<ALaserDataFlow> RedirectedDataFlow;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Data Flow")
+	TSet<TObjectPtr<ALaserDataFlow>> IncomingDataFlows;
 	
 public:
 	APuzzleGameCharacter();
@@ -76,6 +84,12 @@ protected:
 	/** Handles jump end inputs from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoJumpEnd();
+
+	void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	virtual void OnFlowRedirectStart_Implementation(class ALaserDataFlow* DataFlow) override;
+
+	virtual void OnFlowRedirectEnd_Implementation(class ALaserDataFlow* DataFlow) override;
 
 protected:
 
