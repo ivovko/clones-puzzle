@@ -80,6 +80,11 @@ void APuzzleGameCharacter::MoveInput(const FInputActionValue& Value)
 	// pass the axis values to the move input
 	DoMove(MovementVector.X, MovementVector.Y);
 
+	if (IsValid(this->RedirectedDataFlow))
+	{
+		this->RedirectedDataFlow->Rerender(GetActorLocation(), GetControlRotation());
+	}
+
 }
 
 void APuzzleGameCharacter::LookInput(const FInputActionValue& Value)

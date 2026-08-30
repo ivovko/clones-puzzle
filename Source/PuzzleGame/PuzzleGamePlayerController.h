@@ -20,7 +20,7 @@ class PUZZLEGAME_API APuzzleGamePlayerController : public APlayerController
 	GENERATED_BODY()
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	UCloneAbilityComponent* CloneAbility;
+	TObjectPtr<UCloneAbilityComponent> CloneAbility;
 
 	virtual void OnPossess(APawn* InPawn) override;
 	

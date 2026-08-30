@@ -153,3 +153,12 @@ void UCloneAbilityComponent::OnPossessClone(ACloneableCharacter *Clone)
         PC->SetControlRotation(CurrentClone->GetCameraRotation());
     }
 }
+
+int32 UCloneAbilityComponent::GetCurrentCloneIndex() const
+{
+    if (IsValid(CurrentClone))
+    {
+        return Clones.IndexOfByKey(CurrentClone);
+    }
+    return -1;
+}

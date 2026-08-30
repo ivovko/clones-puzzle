@@ -52,6 +52,18 @@ public:
 
 	void OnPossessClone(ACloneableCharacter *Clone);
 
+	UFUNCTION(BlueprintPure, Category = "Clone Ability")
+	int32 GetCurrentCloneIndex() const;
+
+	UFUNCTION(BlueprintPure, Category = "Clone Ability")
+	int32 GetCurrentCloneCount() const { return Clones.Num(); }
+
+	UFUNCTION(BlueprintPure, Category = "Clone Ability")
+	bool IsCloneBlockActive(int32 BlockIndex) const { return BlockIndex == GetCurrentCloneIndex(); }
+
+	UFUNCTION(BlueprintPure, Category = "Clone Ability")
+	bool IsCloneBlockVisible(int32 BlockIndex) const { return BlockIndex < GetCurrentCloneCount(); }
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TObjectPtr<UInputAction> SpawnCloneAction;

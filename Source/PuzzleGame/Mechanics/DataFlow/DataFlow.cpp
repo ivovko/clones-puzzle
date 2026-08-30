@@ -25,7 +25,7 @@ void ALaserDataFlow::Tick(float DeltaTime)
         UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel2),
         false,
         actorsToIgnore,
-        EDrawDebugTrace::ForOneFrame,
+        EDrawDebugTrace::None,
         Hit,
         true);
 
