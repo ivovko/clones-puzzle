@@ -1,12 +1,5 @@
 #include "ViewInteractionComponent.h"
 #include "ViewInteractableInterface.h" 
-#include "Kismet/GameplayStatics.h"
-
-   
-UViewInteractionComponent::UViewInteractionComponent()
-{
-    //placeholder
-}
 
 void UViewInteractionComponent::BeginPlay()
 {
@@ -17,9 +10,9 @@ void UViewInteractionComponent::BeginPlay()
         CollisionSource->AttachToComponent(GetOwner()->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
     }
 
-    if (IViewInteractableInterface* Interactable = Cast<IViewInteractableInterface>(GetOwner()))
+    if (GetOwner()->Implements<UViewInteractableInterface>())
     {
-        OwnerMesh = Interactable->GetViewInteractableMesh();
+        OwnerMesh = IViewInteractableInterface::Execute_GetViewInteractableMesh(GetOwner());
 
         if (OwnerMesh)
         {
@@ -57,16 +50,6 @@ void UViewInteractionComponent::EndPointed()
 {
     for (int32 i = 0; i < NumMaterials; i++)
     {
-        UMaterialInterface* Material = nullptr;
-
-        if (OriginalMaterials.IsValidIndex(i))
-        {
-            Material = OriginalMaterials[i];
-        }
-
-        if (Material)
-        {
-            OwnerMesh->SetMaterial(i, Material);
-        }
+        OwnerMesh->SetMaterial(i, OriginalMaterials[i]);
     }
 }

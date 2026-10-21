@@ -6,13 +6,12 @@
 #include "Engine/LocalPlayer.h"
 #include "InputMappingContext.h"
 #include "PuzzleGameCameraManager.h"
-#include "Mechanics/CloneAbility/InputBindableInterface.h"
+#include "PuzzleGameGameMode.h"
 
 APuzzleGamePlayerController::APuzzleGamePlayerController()
 {
 	// set the player camera manager class
 	PlayerCameraManagerClass = APuzzleGameCameraManager::StaticClass();
-	CloneAbility = CreateDefaultSubobject<UCloneAbilityComponent>(TEXT("CloneAbilityComponent"));
 }
 
 void APuzzleGamePlayerController::SetupInputComponent()
@@ -28,15 +27,52 @@ void APuzzleGamePlayerController::SetupInputComponent()
 		}
 	}
 
-	CloneAbility->SetupInputComponent(InputComponent);
+	CurrentInputComponent = InputComponent;
+	OnInputComponentReady.Broadcast(InputComponent);
 }
 
 void APuzzleGamePlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
-	if (ACloneableCharacter* CloneablePawn = Cast<ACloneableCharacter>(InPawn))
+	if (IsValid(PossessedPawn))
 	{
-		CloneAbility->OnPossessClone(CloneablePawn);
+		PossessedPawn->OnDestroyed.RemoveDynamic(this, &APuzzleGamePlayerController::HandlePossessedPawnDestroyed);
+	}
+
+	PossessedPawn = InPawn;
+	if (IsValid(PossessedPawn))
+	{
+		PossessedPawn->OnDestroyed.AddUniqueDynamic(this, &APuzzleGamePlayerController::HandlePossessedPawnDestroyed);
+	}
+
+}
+
+void APuzzleGamePlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (IsValid(PossessedPawn))
+	{
+		PossessedPawn->OnDestroyed.RemoveDynamic(this, &APuzzleGamePlayerController::HandlePossessedPawnDestroyed);
+	}
+
+	Super::EndPlay(EndPlayReason);
+}
+
+void APuzzleGamePlayerController::HandlePossessedPawnDestroyed(AActor* DestroyedActor)
+{
+	if (DestroyedActor == PossessedPawn)
+	{
+		if (UWorld* World = GetWorld())
+		{
+			if (World->bIsTearingDown)
+			{
+				return;
+			}
+
+			if (APuzzleGameGameMode* GameMode = World->GetAuthGameMode<APuzzleGameGameMode>())
+			{
+				GameMode->RestartCurrentLevel();
+			}
+		}
 	}
 }

@@ -16,6 +16,8 @@ class APuzzleGameGameMode : public AGameModeBase
 
 public:
 	APuzzleGameGameMode();
+
+	void RestartCurrentLevel();
 };
 
 

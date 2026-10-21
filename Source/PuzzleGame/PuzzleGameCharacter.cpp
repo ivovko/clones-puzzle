@@ -1,14 +1,12 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "PuzzleGameCharacter.h"
-#include "Animation/AnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "EnhancedInputComponent.h"
 #include "InputActionValue.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "Mechanics/DataFlow/DataFlow.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -37,7 +35,7 @@ APuzzleGameCharacter::APuzzleGameCharacter()
 	FirstPersonCameraComponent->bEnableFirstPersonScale = true;
 	FirstPersonCameraComponent->FirstPersonFieldOfView = 70.0f;
 	FirstPersonCameraComponent->FirstPersonScale = 0.6f;
-
+	
 	// configure the character comps
 	GetMesh()->SetOwnerNoSee(true);
 	GetMesh()->FirstPersonPrimitiveType = EFirstPersonPrimitiveType::WorldSpaceRepresentation;
@@ -71,7 +69,6 @@ void APuzzleGameCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 	}
 }
 
-
 void APuzzleGameCharacter::MoveInput(const FInputActionValue& Value)
 {
 	// get the Vector2D move axis
@@ -79,12 +76,6 @@ void APuzzleGameCharacter::MoveInput(const FInputActionValue& Value)
 
 	// pass the axis values to the move input
 	DoMove(MovementVector.X, MovementVector.Y);
-
-	if (IsValid(this->RedirectedDataFlow))
-	{
-		this->RedirectedDataFlow->Rerender(GetActorLocation(), GetControlRotation());
-	}
-
 }
 
 void APuzzleGameCharacter::LookInput(const FInputActionValue& Value)
@@ -94,48 +85,6 @@ void APuzzleGameCharacter::LookInput(const FInputActionValue& Value)
 
 	// pass the axis values to the aim input
 	DoAim(LookAxisVector.X, LookAxisVector.Y);
-
-	if (IsValid(this->RedirectedDataFlow))
-	{
-		this->RedirectedDataFlow->Rerender(GetActorLocation(), GetControlRotation());
-	}	
-
-}
-
-void APuzzleGameCharacter::OnFlowRedirectStart_Implementation(ALaserDataFlow* DataFlow)
-{
-	IncomingDataFlows.Add(DataFlow);
-
-	if (!IsValid(RedirectedDataFlow))
-	{
-		FRotator SpawnRotation = IsLocallyControlled() ? GetControlRotation() : GetCameraRotation();
-		SpawnRotation.Pitch += -90.0f;
-
-		FTransform SpawnTransform;
-		SpawnTransform.SetLocation(GetCapsuleComponent()->GetComponentLocation());
-		SpawnTransform.SetRotation(SpawnRotation.Quaternion());
-		SpawnTransform.SetScale3D(DataFlow->GetDataFlowMesh()->GetComponentScale());
-
-		ALaserDataFlow* SpawnedDataFlow = GetWorld()->SpawnActor<ALaserDataFlow>(DataFlow->GetClass(), SpawnTransform);
-
-		if (SpawnedDataFlow)
-		{
-			SpawnedDataFlow->IgnoreActor(this);
-		}
-
-		RedirectedDataFlow = SpawnedDataFlow;
-	}
-}
-
-void APuzzleGameCharacter::OnFlowRedirectEnd_Implementation(ALaserDataFlow* DataFlow)
-{
-	IncomingDataFlows.Remove(DataFlow);
-
-	if (IncomingDataFlows.IsEmpty() && IsValid(RedirectedDataFlow))
-	{
-		RedirectedDataFlow->Destroy();
-		RedirectedDataFlow = nullptr;
-	}
 }
 
 void APuzzleGameCharacter::DoAim(float Yaw, float Pitch)
@@ -170,12 +119,3 @@ void APuzzleGameCharacter::DoJumpEnd()
 	StopJumping();
 }
 
-void APuzzleGameCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	Super::EndPlay(EndPlayReason);
-
-	if (IsValid(this->RedirectedDataFlow))
-	{
-		this->RedirectedDataFlow->Destroy();
-	}
-}

@@ -1,5 +1,16 @@
 #include "DataFlow.h"
+#include "DataFlowRotationProviderInterface.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "DataFlowInteractionComponent.h"
+#include "Components/ArrowComponent.h"
+#include "Components/SceneComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "../CollisionChannels.h"
+
+namespace
+{
+    constexpr float DirectionArrowPitchOffsetDegrees = 90.0f;
+}
 
 ALaserDataFlow::ALaserDataFlow()
 {
@@ -22,7 +33,7 @@ void ALaserDataFlow::Tick(float DeltaTime)
         GetWorld(),
         DirectionArrow->GetComponentLocation(),
         DirectionArrow->GetComponentLocation() + DirectionArrow->GetForwardVector() * MaxTraceDistance,
-        UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel2),
+        UEngineTypes::ConvertToTraceType(PuzzleGameCollisionChannels::Interaction),
         false,
         actorsToIgnore,
         EDrawDebugTrace::None,
@@ -43,44 +54,103 @@ void ALaserDataFlow::Tick(float DeltaTime)
     tmp = tmp - Hit.TraceStart;
 
     FVector CurrentScale = DataFlowMesh->GetComponentScale();
-    DataFlowMesh->SetWorldScale3D(FVector(CurrentScale.X, CurrentScale.Y, tmp.Size() / 200.0f));
+    DataFlowMesh->SetWorldScale3D(FVector(CurrentScale.X, CurrentScale.Y, tmp.Size() / DistancePerScaleUnit));
 
     AActor* HitActor = Hit.GetActor();
-
-    if (IsValid(HitActor) && HitActor->Implements<UDataFlowInteractableInterface>())
-    {
-        if (LastInteractable != HitActor)
-        {
-            if (LastInteractable.IsValid())
-            {
-                IDataFlowInteractableInterface::Execute_OnFlowRedirectEnd(LastInteractable.Get(), this);
-            }
-
-            LastInteractable = HitActor;
-        }
-
-        IDataFlowInteractableInterface::Execute_OnFlowRedirectStart(LastInteractable.Get(), this);
-    }
-    else if (LastInteractable.IsValid())
-    {
-        IDataFlowInteractableInterface::Execute_OnFlowRedirectEnd(LastInteractable.Get(), this);
-        LastInteractable = nullptr;
-    }
+    UDataFlowInteractionComponent* HitInteractionComponent = IsValid(HitActor)
+        ? HitActor->FindComponentByClass<UDataFlowInteractionComponent>()
+        : nullptr;
+    UpdateInteraction(HitInteractionComponent);
 }
 
 void ALaserDataFlow::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+    UpdateInteraction(nullptr);
+    StopFollowingComponents();
     Super::EndPlay(EndPlayReason);
+}
 
-    if (LastInteractable.IsValid())
+void ALaserDataFlow::UpdateInteraction(UDataFlowInteractionComponent* HitInteractionComponent)
+{
+    if (LastInteractionComponent.Get() == HitInteractionComponent)
     {
-        IDataFlowInteractableInterface::Execute_OnFlowRedirectEnd(LastInteractable.Get(), this);
+        return;
+    }
+
+    if (UDataFlowInteractionComponent* PreviousComponent = LastInteractionComponent.Get())
+    {
+        PreviousComponent->EndInteraction(this);
+    }
+
+    LastInteractionComponent = HitInteractionComponent;
+
+    if (IsValid(HitInteractionComponent))
+    {
+        HitInteractionComponent->StartInteraction(this);
+    }
+}
+
+void ALaserDataFlow::FollowComponents(USceneComponent* InLocationUpdateTrigger, USceneComponent* InRotationUpdateTrigger,
+    AActor* InProvider)
+{
+    StopFollowingComponents();
+
+    if (!IsValid(InLocationUpdateTrigger) || !IsValid(InRotationUpdateTrigger) || !IsValid(InProvider) ||
+        !InProvider->Implements<UDataFlowRotationProviderInterface>())
+    {
+        return;
+    }
+
+    LocationUpdateTrigger = InLocationUpdateTrigger;
+    RotationUpdateTrigger = InRotationUpdateTrigger;
+    Provider = InProvider;
+    LocationTransformUpdatedHandle = InLocationUpdateTrigger->TransformUpdated.AddUObject(this, &ALaserDataFlow::HandleFollowedComponentTransformUpdated);
+
+    if (InRotationUpdateTrigger != InLocationUpdateTrigger)
+    {
+        RotationTransformUpdatedHandle = InRotationUpdateTrigger->TransformUpdated.AddUObject(this, &ALaserDataFlow::HandleFollowedComponentTransformUpdated);
+    }
+
+    UpdateFromFollowedComponents();
+}
+
+void ALaserDataFlow::HandleFollowedComponentTransformUpdated(USceneComponent*, EUpdateTransformFlags, ETeleportType)
+{
+    UpdateFromFollowedComponents();
+}
+
+void ALaserDataFlow::StopFollowingComponents()
+{
+    if (USceneComponent* LocationTrigger = LocationUpdateTrigger.Get())
+    {
+        LocationTrigger->TransformUpdated.Remove(LocationTransformUpdatedHandle);
+    }
+
+    if (USceneComponent* RotationTrigger = RotationUpdateTrigger.Get())
+    {
+        RotationTrigger->TransformUpdated.Remove(RotationTransformUpdatedHandle);
+    }
+
+    LocationUpdateTrigger = nullptr;
+    RotationUpdateTrigger = nullptr;
+    Provider = nullptr;
+    LocationTransformUpdatedHandle.Reset();
+    RotationTransformUpdatedHandle.Reset();
+}
+
+void ALaserDataFlow::UpdateFromFollowedComponents()
+{
+    AActor* ResolvedProvider = Provider.Get();
+    if (IsValid(ResolvedProvider))
+    {
+        const FRotator Rotation = IDataFlowRotationProviderInterface::Execute_GetDataFlowRotation(ResolvedProvider);
+        Rerender(ResolvedProvider->GetActorLocation(), Rotation);
     }
 }
 
 void ALaserDataFlow::Rerender(FVector location, FRotator rotation)
 {
-    rotation.Pitch -= 90.0f;
+    rotation.Pitch -= DirectionArrowPitchOffsetDegrees;
 
     SetActorLocation(location);
     SetActorRotation(rotation);

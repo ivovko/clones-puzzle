@@ -4,10 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
-#include "Mechanics/CloneAbility/CloneAbilityComponent.h"
+#include "Mechanics/InputComponentProviderInterface.h"
 #include "PuzzleGamePlayerController.generated.h"
 
 class UInputMappingContext;
+class UInputComponent;
+class APawn;
 
 /**
  *  Simple first person Player Controller
@@ -15,19 +17,32 @@ class UInputMappingContext;
  *  Overrides the Player Camera Manager class.
  */
 UCLASS(abstract)
-class PUZZLEGAME_API APuzzleGamePlayerController : public APlayerController
+class PUZZLEGAME_API APuzzleGamePlayerController : public APlayerController, public IInputComponentProviderInterface
 {
 	GENERATED_BODY()
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UCloneAbilityComponent> CloneAbility;
+	UPROPERTY()
+	TObjectPtr<APawn> PossessedPawn;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UInputComponent> CurrentInputComponent;
 
 	virtual void OnPossess(APawn* InPawn) override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
+	UFUNCTION()
+	void HandlePossessedPawnDestroyed(AActor* DestroyedActor);
 	
 public:
 
 	/** Constructor */
 	APuzzleGamePlayerController();
+
+	UPROPERTY(BlueprintAssignable, Category = "Input")
+	FInputComponentReadyEvent OnInputComponentReady;
+
+	virtual FInputComponentReadyEvent& GetInputComponentReadyEvent() override { return OnInputComponentReady; }
+	virtual UInputComponent* GetCurrentInputComponent() const override { return CurrentInputComponent; }
 
 protected:
 

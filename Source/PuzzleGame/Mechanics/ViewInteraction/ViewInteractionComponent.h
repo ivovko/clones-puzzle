@@ -4,6 +4,10 @@
 #include "Components/ActorComponent.h"
 #include "ViewInteractionComponent.generated.h"
 
+class UMaterialInterface;
+class UMeshComponent;
+class UPrimitiveComponent;
+
 /*
     This component is responsible for handling the visual feedback
     of interactable objects when they are pointed at by the player.
@@ -25,8 +29,6 @@ class UViewInteractionComponent : public UActorComponent
     virtual void BeginPlay() override;
 
 public:
-    UViewInteractionComponent();
-
     UFUNCTION(BlueprintCallable)
     void StartPointed();
 

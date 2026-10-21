@@ -1,56 +1,70 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "InputBindableInterface.h"
-#include "CloneableCharacter.h"
+#include "Components/ActorComponent.h"
 #include "CloneAbilityComponent.generated.h"
 
+class ACharacter;
+class APawn;
+class APlayerController;
+class UEnhancedInputComponent;
 class UInputAction;
+class UInputComponent;
+class UClonePawnComponent;
 
 /*
-	This component is responsible for handling clone spawning and possession.
-	It should be attached to the player controller. 
-
-	This component expects that controlled pawn is of type ACloneableCharacter,
-	and the player controller to map the input actions to the ones specified in the component.
+	This component manages clone spawning and possession for ACharacter pawns
+	that have a UClonePawnComponent.
 */
 
 UCLASS(Blueprintable, meta = (BlueprintSpawnableComponent))
-class UCloneAbilityComponent : public UActorComponent, public IInputBindableInterface
+class UCloneAbilityComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
 	virtual void BeginPlay() override;
 
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction) override;
 
 	void SpawnClone();
 
+	void EvictOldestNonCurrentClone();
+
 	void SlowTime();
 
+	void RestoreTimeDilation();
+
 	void PossessClone();
+
+	void SetPointedClone(ACharacter* NewPointedClone);
+
+	UFUNCTION()
+	void HandleInputComponentReady(UInputComponent* InputComponent);
+
+	UFUNCTION()
+	void HandlePossessedPawnChanged(APawn* OldPawn, APawn* NewPawn);
 
 	UPROPERTY()
 	TObjectPtr<APlayerController> PC;
 
-	UPROPERTY()
-	TObjectPtr<ACloneableCharacter> CurrentClone;
+	TWeakObjectPtr<UEnhancedInputComponent> BoundInputComponent;
 
 	UPROPERTY()
-	TObjectPtr<ACloneableCharacter> PointedClone;
+	TObjectPtr<ACharacter> CurrentClone;
 
 	UPROPERTY()
-	TSubclassOf<ACloneableCharacter> ClonePawnClass;
+	TObjectPtr<ACharacter> PointedClone;
 
 	UPROPERTY()
-	TArray<TObjectPtr<ACloneableCharacter>> Clones;
+	TSubclassOf<ACharacter> ClonePawnClass;
+
+	UPROPERTY()
+	TArray<TObjectPtr<ACharacter>> Clones;
 
 public:
 	UCloneAbilityComponent();
-
-	virtual void SetupInputComponent(UInputComponent *InputComponent) override;
-
-	void OnPossessClone(ACloneableCharacter *Clone);
 
 	UFUNCTION(BlueprintPure, Category = "Clone Ability")
 	int32 GetCurrentCloneIndex() const;
@@ -73,5 +87,11 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	float PossessionRange = 100000.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Clone Ability", meta = (ClampMin = "2"))
+	int32 MaxCloneCount = 3;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Clone Ability", meta = (ClampMin = "0.01", ClampMax = "1.0"))
+	float AimTimeDilation = 0.3f;
 
 };

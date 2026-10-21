@@ -1,8 +1,13 @@
 #include "CloneAbilityComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "EnhancedInputComponent.h"
+#include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/PlayerController.h"
+#include "../InputComponentProviderInterface.h"
+#include "ClonePawnComponent.h"
 #include "../ViewInteraction/ViewInteractionComponent.h"
+#include "../CollisionChannels.h"
 
 UCloneAbilityComponent::UCloneAbilityComponent()
 {
@@ -14,62 +19,144 @@ void UCloneAbilityComponent::BeginPlay()
     Super::BeginPlay();
 
     PC = Cast<APlayerController>(GetOwner());
-    ClonePawnClass = CurrentClone->GetClass();
-    Clones.Add(CurrentClone);
+    if (IsValid(PC))
+    {
+        PC->OnPossessedPawnChanged.AddUniqueDynamic(this, &UCloneAbilityComponent::HandlePossessedPawnChanged);
+        HandlePossessedPawnChanged(nullptr, PC->GetPawn());
+    }
+	if (IInputComponentProviderInterface* InputProvider = Cast<IInputComponentProviderInterface>(GetOwner()))
+	{
+		InputProvider->GetInputComponentReadyEvent().AddUniqueDynamic(this, &UCloneAbilityComponent::HandleInputComponentReady);
+		HandleInputComponentReady(InputProvider->GetCurrentInputComponent());
+	}
 }
 
-void UCloneAbilityComponent::SetupInputComponent(UInputComponent *InputComponent)
+void UCloneAbilityComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-    if (UEnhancedInputComponent *EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent))
+    if (IsValid(PC))
     {
+        PC->OnPossessedPawnChanged.RemoveDynamic(this, &UCloneAbilityComponent::HandlePossessedPawnChanged);
+    }
+    if (IInputComponentProviderInterface* InputProvider = Cast<IInputComponentProviderInterface>(GetOwner()))
+    {
+        InputProvider->GetInputComponentReadyEvent().RemoveDynamic(this, &UCloneAbilityComponent::HandleInputComponentReady);
+    }
+    if (UEnhancedInputComponent* InputComponent = BoundInputComponent.Get())
+    {
+        InputComponent->ClearBindingsForObject(this);
+    }
+
+    RestoreTimeDilation();
+
+    Super::EndPlay(EndPlayReason);
+}
+
+void UCloneAbilityComponent::HandleInputComponentReady(UInputComponent* InputComponent)
+{
+    if (UEnhancedInputComponent* PreviouslyBoundInputComponent = BoundInputComponent.Get())
+    {
+        PreviouslyBoundInputComponent->ClearBindingsForObject(this);
+    }
+    BoundInputComponent = nullptr;
+
+    if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent))
+    {
+		BoundInputComponent = EnhancedInputComponent;
         EnhancedInputComponent->BindAction(SpawnCloneAction, ETriggerEvent::Started, this, &UCloneAbilityComponent::SpawnClone);
         EnhancedInputComponent->BindAction(PossessionAction, ETriggerEvent::Started, this, &UCloneAbilityComponent::SlowTime);
         EnhancedInputComponent->BindAction(PossessionAction, ETriggerEvent::Completed, this, &UCloneAbilityComponent::PossessClone);
+        EnhancedInputComponent->BindAction(PossessionAction, ETriggerEvent::Canceled, this, &UCloneAbilityComponent::RestoreTimeDilation);
     }
 }
 
 void UCloneAbilityComponent::SlowTime()
 {
-    UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 0.3f);
+    UGameplayStatics::SetGlobalTimeDilation(GetWorld(), AimTimeDilation);
+}
+
+void UCloneAbilityComponent::RestoreTimeDilation()
+{
+    UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
 }
 
 void UCloneAbilityComponent::SpawnClone()
 {
-    ACloneableCharacter *NewClone = GetWorld()->SpawnActor<ACloneableCharacter>(ClonePawnClass, CurrentClone->GetActorTransform());
+    if (!IsValid(CurrentClone) || !IsValid(PC) || !ClonePawnClass)
+    {
+        return;
+    }
+
+    ACharacter* NewClone = GetWorld()->SpawnActor<ACharacter>(ClonePawnClass, CurrentClone->GetActorTransform());
 
     if (NewClone)
     {
-        NewClone->SetCameraRotation(PC->GetControlRotation());
+        NewClone->FindComponentByClass<UClonePawnComponent>()->SetSavedViewRotation(PC->GetControlRotation());
 
-        if (Clones.Num() == 3)
+        if (Clones.Num() >= MaxCloneCount)
         {
-            if (Clones[0] == CurrentClone)
-            {
-                Clones[1]->Destroy();
-                Clones.RemoveAt(1);
-            }
-            else
-            {
-                Clones[0]->Destroy();
-                Clones.RemoveAt(0);
-            }
+            EvictOldestNonCurrentClone();
         }
 
         Clones.Add(NewClone);
     }
 }
 
+void UCloneAbilityComponent::EvictOldestNonCurrentClone()
+{
+    for (int32 Index = 0; Index < Clones.Num(); ++Index)
+    {
+        if (Clones[Index] != CurrentClone)
+        {
+            if (IsValid(Clones[Index]))
+            {
+                Clones[Index]->Destroy();
+            }
+
+            Clones.RemoveAt(Index);
+            return;
+        }
+    }
+}
+
 void UCloneAbilityComponent::PossessClone()
 {
-    if (PointedClone)
+    if (IsValid(PointedClone) && IsValid(CurrentClone) && IsValid(PC))
     {
-        CurrentClone->SetCameraRotation(PC->GetControlRotation());
-        PC->Possess(PointedClone);
-        CurrentClone = PointedClone;
-        PointedClone = nullptr;
+        CurrentClone->FindComponentByClass<UClonePawnComponent>()->SetSavedViewRotation(PC->GetControlRotation());
+
+        ACharacter* CloneToPossess = PointedClone;
+        SetPointedClone(nullptr);
+        PC->Possess(CloneToPossess);
+        CurrentClone = CloneToPossess;
     }
 
-    UGameplayStatics::SetGlobalTimeDilation(GetWorld(), 1.0f);
+    RestoreTimeDilation();
+}
+
+void UCloneAbilityComponent::SetPointedClone(ACharacter* NewPointedClone)
+{
+    if (PointedClone == NewPointedClone)
+    {
+        return;
+    }
+
+    if (IsValid(PointedClone))
+    {
+        if (UViewInteractionComponent* ViewComponent = PointedClone->FindComponentByClass<UViewInteractionComponent>())
+        {
+            ViewComponent->EndPointed();
+        }
+    }
+
+    PointedClone = NewPointedClone;
+
+    if (IsValid(PointedClone))
+    {
+        if (UViewInteractionComponent* ViewComponent = PointedClone->FindComponentByClass<UViewInteractionComponent>())
+        {
+            ViewComponent->StartPointed();
+        }
+    }
 }
 
 void UCloneAbilityComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction *ThisTickFunction)
@@ -87,7 +174,7 @@ void UCloneAbilityComponent::TickComponent(float DeltaTime, ELevelTick TickType,
             TArray<AActor *> ActorsToIgnore;
             ActorsToIgnore.Add(CurrentClone);
 
-            const ETraceTypeQuery TraceChannel = UEngineTypes::ConvertToTraceType(ECC_GameTraceChannel2); // custom trace channel for clones, project specific
+            const ETraceTypeQuery TraceChannel = UEngineTypes::ConvertToTraceType(PuzzleGameCollisionChannels::Interaction);
 
             UKismetSystemLibrary::LineTraceSingle(
                 GetWorld(),
@@ -103,54 +190,46 @@ void UCloneAbilityComponent::TickComponent(float DeltaTime, ELevelTick TickType,
                 FLinearColor::Green,
                 5.0f);
 
-            if (Hit.GetActor() && Hit.GetActor()->IsA(ClonePawnClass))
+            ACharacter* HitCharacter = Cast<ACharacter>(Hit.GetActor());
+            if (IsValid(HitCharacter) && IsValid(HitCharacter->FindComponentByClass<UClonePawnComponent>()))
             {
-                if (PointedClone)
-                {
-                    if (PointedClone != Hit.GetActor())
-                    {
-                        PointedClone->GetViewInteraction()->EndPointed();
-                        PointedClone = Cast<ACloneableCharacter>(Hit.GetActor());
-                        PointedClone->GetViewInteraction()->StartPointed();
-                    }
-                }
-                else
-                {
-                    PointedClone = Cast<ACloneableCharacter>(Hit.GetActor());
-                    PointedClone->GetViewInteraction()->StartPointed();
-                }
+                SetPointedClone(HitCharacter);
             }
-            else if (PointedClone)
+            else
             {
-                PointedClone->GetViewInteraction()->EndPointed();
-                PointedClone = nullptr;
+                SetPointedClone(nullptr);
             }
-        }
-    }
-    else
-    {
-        if (UWorld *World = GetWorld())
-        {
-            UGameplayStatics::OpenLevel(World, FName(*UGameplayStatics::GetCurrentLevelName(World, true)));
         }
     }
 }
 
-void UCloneAbilityComponent::OnPossessClone(ACloneableCharacter *Clone)
+void UCloneAbilityComponent::HandlePossessedPawnChanged(APawn*, APawn* NewPawn)
 {
-    if (IsValid(CurrentClone) && IsValid(Clone))
+    ACharacter* Clone = Cast<ACharacter>(NewPawn);
+    UClonePawnComponent* CloneComponent = IsValid(Clone) ? Clone->FindComponentByClass<UClonePawnComponent>() : nullptr;
+    if (!IsValid(CloneComponent))
+    {
+        return;
+    }
+
+    if (IsValid(CurrentClone))
     {
         if (CurrentClone->GetCharacterMovement()->IsFalling() && Clone->GetCharacterMovement()->IsFalling())
         {
             Clone->LaunchCharacter(CurrentClone->GetVelocity(), true, true);
         }
     }
+    else
+    {
+        ClonePawnClass = Clone->GetClass();
+        Clones.Add(Clone);
+    }
 
     CurrentClone = Clone;
 
     if (PC)
     {
-        PC->SetControlRotation(CurrentClone->GetCameraRotation());
+        PC->SetControlRotation(CloneComponent->GetSavedViewRotation());
     }
 }
 
